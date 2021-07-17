@@ -1,1 +1,1 @@
-web: gunicorn Api-IoT.wsgi --log-file -
+web: gunicorn main:app
