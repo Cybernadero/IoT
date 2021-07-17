@@ -13,6 +13,10 @@ CORS(app)
 def option():
     IdSensor = request.args.get("IdSensor")
     SensorValue = request.args.get("SensorValue")
+    response = str(database.db.sensors.insert_one({
+        'IdSensor':IdSensor,
+        'SensorValue':SensorValue
+        }).inserted_id)
     return jsonify({"IdSensor": IdSensor, "SensorValue": SensorValue})
 
 
