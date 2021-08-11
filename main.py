@@ -1,8 +1,7 @@
-  
+from bson.objectid import ObjectId
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from flask_restful import Api
-from sensors import Sensors
+from flask_restful import Api, Resource, abort
 
 import db_config as database
 
@@ -11,28 +10,37 @@ app=Flask(__name__)
 api=Api(app)
 CORS(app)
 
-@app.route("/createGreenhouse/", methods=['GET'])
-def createGreenhouse():
 
-    IdArduino = request.args.get("IdArduino")
-    flag = Sensors.check_if_arduino_exists(IdArduino)
-    print(flag)
-    if(flag):
-        date = request.args.get("date")
-        response = str(database.db.sensors.insert_one(
-                {
-                    'IdArduino':IdArduino,
-                    'temperature':0,
-                    'humidity':0,
-                    'lastStatus':date,
-                    'measurements':[]
-                }
-            ).inserted_id)
-
-    if flag:
-        return jsonify({"response":response, "IdArduino":IdArduino, "date":date})
-    else:
-        return jsonify({'message':'Arduino already exists'})
+class Sensors(Resource): 
+    
+    def post(self):
+        _id = str(database.db.sensors.insert_one({
+            'IdArduino':request.json['IdArduino'],
+            'temperature':request.json['temperature'],
+            'humidity':request.json['humidity'],
+            'lastUpdate':request.json['lastUpdate'],
+            'measurements':[]
+            
+        }).inserted_id)
+    
+        return jsonify({"_id":_id})
+    
+    def get(self, by, data):
+        response = self.abort_if_not_exist(by, data)
+        response['_id'] = str(response['_id'])
+        return jsonify(response)
+        
+        
+    def abort_if_not_exist(self,by,data):
+        if by == "_id":
+            response = database.db.sensors.find_one({"_id":ObjectId(data)})
+        else:
+            response = database.db.sensors.find_one({f"{by}": data})
+            
+        if response:
+            return response
+        else:
+            abort(jsonify({"status":404, f"{by}":f"{data} not found"}))
 
 
 @app.route("/insertData/", methods=['GET'])
@@ -53,14 +61,14 @@ def insert():
             '$set':{
             'temperature':temperature,
             'humidity':humidity,
-            'date':date,
             'lastUpdate':date,
             }
-        })
-
+        }
+    )
     return jsonify({"IdArduino":IdArduino,"temperature":temperature,"humidity":humidity, "date":date})
 
-api.add_resource(Sensors, '/delete/')    
+api.add_resource(Sensors, '/createGreenhouse/', '/<string:by>:<string:data>/')    
 
 if __name__ == '__main__':
+
     app.run(load_dotenv=True)
