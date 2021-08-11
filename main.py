@@ -14,7 +14,8 @@ CORS(app)
 class Sensors(Resource): 
     
     def post(self):
-        _id = str(database.db.sensors.insert_one({
+        _id = str(database.db.sensors.insert_one({     
+            'UserId':request.json['UserId'],
             'IdArduino':request.json['IdArduino'],
             'temperature':request.json['temperature'],
             'humidity':request.json['humidity'],
